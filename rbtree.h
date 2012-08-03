@@ -108,8 +108,15 @@ struct rb_node
 } __attribute__((aligned(sizeof(long))));
     /* The alignment might seem pointless, but allegedly CRIS needs it */
 
+enum rb_root_type
+{
+    ARTIST,
+    ALBUM
+};
+
 struct rb_root
 {
+    enum rb_root_type type;
 	struct rb_node *rb_node;
 };
 
@@ -130,7 +137,7 @@ static inline void rb_set_color(struct rb_node *rb, int color)
 	rb->rb_parent_color = (rb->rb_parent_color & ~1) | color;
 }
 
-#define RB_ROOT	(struct rb_root) { NULL, }
+#define RB_ROOT	(struct rb_root) { ARTIST, NULL, }
 #define	rb_entry(ptr, type, member) container_of(ptr, type, member)
 
 #define RB_EMPTY_ROOT(root)	((root)->rb_node == NULL)
