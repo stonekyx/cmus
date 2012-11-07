@@ -458,11 +458,11 @@ static void tree_sel_changed(void)
 	album = iter_to_album(&sel);
 	artist = iter_to_artist(&sel);
 	if (album != NULL) {
-		window_set_contents(lib_track_win, &album->track_root);
 		sel_row_type = ALBUM;
+		window_set_contents(lib_track_win, &album->track_root);
 	} else if (artist != NULL) {
-		window_set_contents(lib_track_win, &artist->album_root);
 		sel_row_type = ARTIST;
+		window_set_contents(lib_track_win, &artist->album_root);
 	} else {
 		window_set_empty(lib_track_win);
 	}

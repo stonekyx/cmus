@@ -74,7 +74,7 @@ int display_artist_sort_name;
 int smart_artist_sort = 1;
 int scroll_offset = 2;
 int skip_track_info = 0;
-int auto_expand_albums = 0;
+int auto_expand_albums = 1;
 
 int colors[NR_COLORS] = {
 	-1,
