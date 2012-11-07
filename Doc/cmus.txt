@@ -677,8 +677,17 @@ win-mv-before (*P*)
 win-next (*tab*)
 	Activate next window.  Only relevant in view 1.
 
+win-page-bottom
+	Goto the bottom of the visible part of the current window.
+
 win-page-down (*^F*, *page_down*)
 	Goto down one page in the current window.
+
+win-page-middle
+	Goto the middle of the visible part of the current window.
+
+win-page-top
+	Goto the top of the visible part of the current window.
 
 win-page-up (*^B*, *page_up*)
 	Goto up one page in the current window.
@@ -755,6 +764,9 @@ color_cmdline_bg (default) [`Color`]
 color_cmdline_fg (default) [`Color`]
 	Command line foreground color.
 
+color_cmdline_attr (default) [`Attributes`]
+	Command line attributes.
+
 color_error (lightred) [`Color`]
 	Color of error messages displayed on the command line.
 
@@ -770,11 +782,17 @@ color_statusline_bg (gray) [`Color`]
 color_statusline_fg (black) [`Color`]
 	Status line foreground color.
 
+color_statusline_attr (default) [`Attributes`]
+	Status line attributes.
+
 color_titleline_bg (blue) [`Color`]
 	Background color of the line displaying currently playing track.
 
 color_titleline_fg (white) [`Color`]
 	Foreground color of the line displaying currently playing track.
+
+color_titleline_attr (default) [`Attributes`]
+	Attributes of the line displaying currently playing track.
 
 color_win_bg (default) [`Color`]
 	Window background color.
@@ -790,11 +808,18 @@ color_win_cur_sel_fg (lightyellow) [`Color`]
 	Foreground color of the selected row which is also the currently
 	playing track in active window.
 
+color_win_cur_sel_attr (default) [`Attributes`]
+	Attributes of the selected row which is also the currently
+	playing track in active window.
+
 color_win_dir (lightblue) [`Color`]
 	Color of directories in browser.
 
 color_win_fg (default) [`Color`]
 	Window foreground color.
+
+color_win_attr (default) [`Attributes`]
+	Window attributes.
 
 color_win_inactive_cur_sel_bg (gray) [`Color`]
 	Background color of the selected row which is also the currently
@@ -804,11 +829,18 @@ color_win_inactive_cur_sel_fg (lightyellow) [`Color`]
 	Foreground color of the selected row which is also the currently
 	playing track in inactive window.
 
+color_win_inactive_cur_sel_attr (default) [`Attributes`]
+	Attributes of the selected row which is also the currently
+	playing track in inactive window.
+
 color_win_inactive_sel_bg (gray) [`Color`]
 	Background color of selected row in inactive window.
 
 color_win_inactive_sel_fg (black) [`Color`]
 	Foreground color of selected row in inactive window.
+
+color_win_inactive_sel_attr (default) [`Attributes`]
+	Attributes of selected row in inactive window.
 
 color_win_sel_bg (blue) [`Color`]
 	Background color of selected row in active window.
@@ -816,11 +848,17 @@ color_win_sel_bg (blue) [`Color`]
 color_win_sel_fg (white) [`Color`]
 	Foreground color of selected row in active window.
 
+color_win_sel_attr (default) [`Attributes`]
+	Attributes of selected row in active window.
+
 color_win_title_bg (blue) [`Color`]
 	Background color of window titles (topmost line of the screen).
 
 color_win_title_fg (white) [`Color`]
 	Foreground color of window titles (topmost line of the screen).
+
+color_win_title_attr (default) [`Attributes`]
+	Attributes of window titles (topmost line of the screen).
 
 confirm_run (true)
 	Ask for confirmation before executing *:run*
@@ -869,6 +907,11 @@ id3_default_charset (ISO-8859-1)
 
 	NOTE:  This is used only if the tag is not valid UTF-8.
 
+icecast_default_charset (ISO-8859-1)
+	Default character set to use for non-UTF-8 icecast stream metadata.
+
+	NOTE:  This is used only if the metadata is not valid UTF-8.
+
 lib_sort (artist album discnumber tracknumber title filename) [`Sort Keys`]
 	Sort keys for the sorted library view (2).
 
@@ -905,6 +948,9 @@ replaygain_preamp (6.0)
 resume (false)
 	Resume playback on startup.
 
+scroll_offset (2) [0-9999]
+	Minimal number of screen lines to keep above and below the cursor.
+
 show_hidden (false)
 	Display hidden files in browser.
 
@@ -917,6 +963,11 @@ show_remaining_time (false)
 shuffle (false)
 	Play in shuffled order.  Shuffle works in the library views (1-2) and
 	playlist view (3).
+
+skip_track_info (false)
+	Don't load metadata when adding tracks. Useful when using network file system
+	and having huge amount of files.
+	Tags can be loaded using 'update-cache' or 'win-update-cache' commands.
 
 softvol (false)
 	Use software volume control.
@@ -954,6 +1005,23 @@ Fg & bg, 0..7
 Fg, 8..15
 	darkgray, lightred, lightgreen, lightyellow, lightblue, lightmagenta,
 	lightcyan, white
+
+@h2 Attributes
+
+Attributes is a set of names "standout|bold":
+
+`default` does nothing, if you put it with other attributes
+the other attributes will be used.
+
+`standout` makes the text standout.
+
+`bold` makes the text bold.
+
+`reverse` reverses the text colors.
+
+`underline` underlines the text.
+
+`blink` makes the text blink.
 
 @h2 Format Strings
 

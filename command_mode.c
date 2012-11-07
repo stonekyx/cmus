@@ -118,16 +118,16 @@ void view_add(int view, char *arg, int prepend)
 	switch (view) {
 	case TREE_VIEW:
 	case SORTED_VIEW:
-		cmus_add(lib_add_track, name, ft, JOB_TYPE_LIB);
+		cmus_add(lib_add_track, name, ft, JOB_TYPE_LIB, 0);
 		break;
 	case PLAYLIST_VIEW:
-		cmus_add(pl_add_track, name, ft, JOB_TYPE_PL);
+		cmus_add(pl_add_track, name, ft, JOB_TYPE_PL, 0);
 		break;
 	case QUEUE_VIEW:
 		if (prepend) {
-			cmus_add(play_queue_prepend, name, ft, JOB_TYPE_QUEUE);
+			cmus_add(play_queue_prepend, name, ft, JOB_TYPE_QUEUE, 0);
 		} else {
-			cmus_add(play_queue_append, name, ft, JOB_TYPE_QUEUE);
+			cmus_add(play_queue_append, name, ft, JOB_TYPE_QUEUE, 0);
 		}
 		break;
 	default:
@@ -165,7 +165,7 @@ void view_load(int view, char *arg)
 		editable_lock();
 		editable_clear(&lib_editable);
 		editable_unlock();
-		cmus_add(lib_add_track, name, FILE_TYPE_PL, JOB_TYPE_LIB);
+		cmus_add(lib_add_track, name, FILE_TYPE_PL, JOB_TYPE_LIB, 0);
 		free(lib_filename);
 		lib_filename = name;
 		break;
@@ -174,7 +174,7 @@ void view_load(int view, char *arg)
 		editable_lock();
 		editable_clear(&pl_editable);
 		editable_unlock();
-		cmus_add(pl_add_track, name, FILE_TYPE_PL, JOB_TYPE_PL);
+		cmus_add(pl_add_track, name, FILE_TYPE_PL, JOB_TYPE_PL, 0);
 		free(pl_filename);
 		pl_filename = name;
 		break;
@@ -1370,7 +1370,7 @@ static void add_from_browser(add_ti_cb add, int job_type)
 
 		ft = cmus_detect_ft(sel, &ret);
 		if (ft != FILE_TYPE_INVALID) {
-			cmus_add(add, ret, ft, job_type);
+			cmus_add(add, ret, ft, job_type, 0);
 			window_down(browser_win, 1);
 		}
 		free(ret);
@@ -1672,6 +1672,27 @@ static void cmd_win_pg_up(char *arg)
 {
 	editable_lock();
 	window_page_up(current_win());
+	editable_unlock();
+}
+
+static void cmd_win_pg_top(char *arg)
+{
+	editable_lock();
+	window_page_top(current_win());
+	editable_unlock();
+}
+
+static void cmd_win_pg_bottom(char *arg)
+{
+	editable_lock();
+	window_page_bottom(current_win());
+	editable_unlock();
+}
+
+static void cmd_win_pg_middle(char *arg)
+{
+	editable_lock();
+	window_page_middle(current_win());
 	editable_unlock();
 }
 
@@ -2505,7 +2526,10 @@ struct command commands[] = {
 	{ "win-mv-after",	cmd_win_mv_after,0, 0, NULL,		  0, 0 },
 	{ "win-mv-before",	cmd_win_mv_before,0, 0, NULL,		  0, 0 },
 	{ "win-next",		cmd_win_next,	0, 0, NULL,		  0, 0 },
+	{ "win-page-bottom",	cmd_win_pg_bottom,0, 0, NULL,		  0, 0 },
 	{ "win-page-down",	cmd_win_pg_down,0, 0, NULL,		  0, 0 },
+	{ "win-page-middle",	cmd_win_pg_middle,0, 0, NULL,		  0, 0 },
+	{ "win-page-top",	cmd_win_pg_top,	0, 0, NULL,		  0, 0 },
 	{ "win-page-up",	cmd_win_pg_up,	0, 0, NULL,		  0, 0 },
 	{ "win-remove",		cmd_win_remove,	0, 0, NULL,		  0, CMD_UNSAFE },
 	{ "win-sel-cur",	cmd_win_sel_cur,0, 0, NULL,		  0, 0 },
@@ -2761,9 +2785,11 @@ void run_parsed_command(char *cmd, char *arg)
 				error_msg("too many arguments\n");
 				break;
 			}
-			if (run_only_safe_commands && c->flags & CMD_UNSAFE) {
-				d_print("trying to execute unsafe command over net\n");
-				break;
+			if (run_only_safe_commands && (c->flags & CMD_UNSAFE)) {
+				if (c->func != cmd_save || !is_stdout_filename(arg)) {
+					d_print("trying to execute unsafe command over net\n");
+					break;
+				}
 			}
 			c->func(arg);
 			break;

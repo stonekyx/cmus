@@ -99,6 +99,20 @@ enum {
 	NR_COLORS
 };
 
+enum {
+	COLOR_CMDLINE_ATTR,
+	COLOR_STATUSLINE_ATTR,
+	COLOR_TITLELINE_ATTR,
+	COLOR_WIN_ATTR,
+	COLOR_WIN_CUR_SEL_ATTR,
+	COLOR_CUR_SEL_ATTR,
+	COLOR_WIN_INACTIVE_CUR_SEL_ATTR,
+	COLOR_WIN_INACTIVE_SEL_ATTR,
+	COLOR_WIN_SEL_ATTR,
+	COLOR_WIN_TITLE_ATTR,
+	NR_ATTRS
+};
+
 #define BRIGHT (1 << 3)
 
 extern char *cdda_device;
@@ -118,11 +132,14 @@ extern int repeat;
 extern int shuffle;
 extern int display_artist_sort_name;
 extern int smart_artist_sort;
+extern int scroll_offset;
+extern int skip_track_info;
 
 extern const char * const aaa_mode_names[];
 extern const char * const view_names[NR_VIEWS + 1];
 
 extern int colors[NR_COLORS];
+extern int attrs[NR_ATTRS];
 
 /* format string for track window (tree view) */
 extern char *track_win_format;
@@ -143,6 +160,7 @@ extern char *window_title_format;
 extern char *window_title_alt_format;
 
 extern char *id3_default_charset;
+extern char *icecast_default_charset;
 
 /* build option list */
 void options_add(void);

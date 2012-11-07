@@ -16,6 +16,7 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "convert.h"
 #include "ui_curses.h"
 #include "cmdline.h"
 #include "search_mode.h"
@@ -118,7 +119,7 @@ static char *server_address = NULL;
 
 static char print_buffer[512];
 
-/* destination buffer for utf8_encode and utf8_decode */
+/* destination buffer for utf8_encode_to_buf and utf8_decode */
 static char conv_buffer[512];
 
 /* one character can take up to 4 bytes in UTF-8 */
@@ -142,6 +143,8 @@ static int track_win_w = 0;
 static int show_cursor;
 static int cursor_x;
 static int cursor_y;
+
+static char *title_buf = NULL;
 
 enum {
 	CURSED_WIN,
@@ -209,6 +212,28 @@ static unsigned char cursed_to_fg_idx[NR_CURSED] = {
 	COLOR_WIN_DIR,
 	COLOR_ERROR,
 	COLOR_INFO
+};
+
+static unsigned char cursed_to_attr_idx[NR_CURSED] = {
+	COLOR_WIN_ATTR,
+	COLOR_WIN_ATTR,
+	COLOR_WIN_INACTIVE_SEL_ATTR,
+	COLOR_WIN_INACTIVE_CUR_SEL_ATTR,
+
+	COLOR_WIN_ATTR,
+	COLOR_WIN_ATTR,
+	COLOR_WIN_SEL_ATTR,
+	COLOR_WIN_CUR_SEL_ATTR,
+
+	COLOR_WIN_ATTR,
+	COLOR_WIN_TITLE_ATTR,
+	COLOR_CMDLINE_ATTR,
+	COLOR_STATUSLINE_ATTR,
+
+	COLOR_TITLELINE_ATTR,
+	COLOR_WIN_ATTR,
+	COLOR_CMDLINE_ATTR,
+	COLOR_CMDLINE_ATTR
 };
 
 /* index is CURSED_*, value is fucking color pair */
@@ -329,7 +354,7 @@ int track_format_valid(const char *format)
 	return format_valid(format, track_fopts);
 }
 
-static void utf8_encode(const char *buffer)
+static void utf8_encode_to_buf(const char *buffer)
 {
 	int n;
 #ifdef HAVE_ICONV
@@ -577,7 +602,7 @@ static void fill_track_fopts_track_info(struct track_info *info)
 	if (using_utf8) {
 		filename = info->filename;
 	} else {
-		utf8_encode(info->filename);
+		utf8_encode_to_buf(info->filename);
 		filename = conv_buffer;
 	}
 
@@ -769,7 +794,7 @@ static void print_filter(struct window *win, int row, struct iter *iter)
 
 	e_filter = e->filter;
 	if (!using_utf8) {
-		utf8_encode(e_filter);
+		utf8_encode_to_buf(e_filter);
 		e_filter = conv_buffer;
 	}
 
@@ -904,7 +929,7 @@ static void update_editable_window(struct editable *e, const char *title, const 
 		if (using_utf8) {
 			/* already UTF-8 */
 		} else {
-			utf8_encode(filename);
+			utf8_encode_to_buf(filename);
 			filename = conv_buffer;
 		}
 		snprintf(buf, sizeof(buf), "%s %s - %d tracks", title,
@@ -951,7 +976,7 @@ static void update_browser_window(void)
 		/* already UTF-8 */
 		dirname = browser_dir;
 	} else {
-		utf8_encode(browser_dir);
+		utf8_encode_to_buf(browser_dir);
 		dirname = conv_buffer;
 	}
 	snprintf(title, sizeof(title), "Browser - %s", dirname);
@@ -1174,7 +1199,7 @@ static void do_update_commandline(void)
 		 * (displayed as <xx>) there would be no problem because bpos
 		 * still equals to cpos, I think.
 		 */
-		utf8_encode(cmdline.line);
+		utf8_encode_to_buf(cmdline.line);
 		str = conv_buffer;
 	}
 
@@ -1284,11 +1309,13 @@ static void do_update_titleline(void)
 			const char *title = get_stream_title();
 
 			if (title != NULL) {
+				free(title_buf);
+				title_buf = to_utf8(title, icecast_default_charset);
 				/*
 				 * StreamTitle overrides radio station name
 				 */
 				use_alt_format = 0;
-				fopt_set_str(&track_fopts[TF_TITLE], title);
+				fopt_set_str(&track_fopts[TF_TITLE], title_buf);
 			}
 		}
 
@@ -1339,7 +1366,7 @@ static int cmdline_cursor_column(void)
 	str = cmdline.line;
 	if (!using_utf8) {
 		/* see do_update_commandline */
-		utf8_encode(cmdline.line);
+		utf8_encode_to_buf(cmdline.line);
 		str = conv_buffer;
 	}
 
@@ -1657,15 +1684,16 @@ void update_colors(void)
 	for (i = 0; i < NR_CURSED; i++) {
 		int bg = colors[cursed_to_bg_idx[i]];
 		int fg = colors[cursed_to_fg_idx[i]];
+		int attr = attrs[cursed_to_attr_idx[i]];
 		int pair = i + 1;
 
 		if (fg >= 8 && fg <= 15) {
 			/* fg colors 8..15 are special (0..7 + bold) */
 			init_pair(pair, fg & 7, bg);
-			pairs[i] = COLOR_PAIR(pair) | (fg & BRIGHT ? A_BOLD : 0);
+			pairs[i] = COLOR_PAIR(pair) | (fg & BRIGHT ? A_BOLD : 0) | attr;
 		} else {
 			init_pair(pair, fg, bg);
-			pairs[i] = COLOR_PAIR(pair);
+			pairs[i] = COLOR_PAIR(pair) | attr;
 		}
 	}
 }
@@ -2288,11 +2316,11 @@ static void init_all(void)
 
 	if (resume_cmus) {
 		resume_load();
-		cmus_add(play_queue_append, play_queue_autosave_filename, FILE_TYPE_PL, JOB_TYPE_QUEUE);
+		cmus_add(play_queue_append, play_queue_autosave_filename, FILE_TYPE_PL, JOB_TYPE_QUEUE, 0);
 	}
 
-	cmus_add(pl_add_track, pl_autosave_filename, FILE_TYPE_PL, JOB_TYPE_PL);
-	cmus_add(lib_add_track, lib_autosave_filename, FILE_TYPE_PL, JOB_TYPE_LIB);
+	cmus_add(pl_add_track, pl_autosave_filename, FILE_TYPE_PL, JOB_TYPE_PL, 0);
+	cmus_add(lib_add_track, lib_autosave_filename, FILE_TYPE_PL, JOB_TYPE_LIB, 0);
 }
 
 static void exit_all(void)

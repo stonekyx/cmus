@@ -72,6 +72,8 @@ int repeat = 0;
 int shuffle = 0;
 int display_artist_sort_name;
 int smart_artist_sort = 1;
+int scroll_offset = 2;
+int skip_track_info = 0;
 
 int colors[NR_COLORS] = {
 	-1,
@@ -104,6 +106,18 @@ int colors[NR_COLORS] = {
 	COLOR_WHITE | BRIGHT
 };
 
+int attrs[NR_ATTRS] = {
+	A_NORMAL,
+	A_NORMAL,
+	A_NORMAL,
+	A_NORMAL,
+	A_NORMAL,
+	A_NORMAL,
+	A_NORMAL,
+	A_NORMAL,
+	A_NORMAL
+};
+
 /* uninitialized option variables */
 char *track_win_format = NULL;
 char *track_win_format_va = NULL;
@@ -116,6 +130,7 @@ char *current_alt_format = NULL;
 char *window_title_format = NULL;
 char *window_title_alt_format = NULL;
 char *id3_default_charset = NULL;
+char *icecast_default_charset = NULL;
 
 static void buf_int(char *buf, int val)
 {
@@ -209,15 +224,39 @@ static void set_buffer_seconds(unsigned int id, const char *buf)
 		player_set_buffer_chunks((sec * SECOND_SIZE + CHUNK_SIZE / 2) / CHUNK_SIZE);
 }
 
+static void get_scroll_offset(unsigned int id, char *buf)
+{
+	buf_int(buf, scroll_offset);
+}
+
+static void set_scroll_offset(unsigned int id, const char *buf)
+{
+	int offset;
+
+	if (parse_int(buf, 0, 9999, &offset))
+		scroll_offset = offset;
+}
+
 static void get_id3_default_charset(unsigned int id, char *buf)
 {
 	strcpy(buf, id3_default_charset);
+}
+
+static void get_icecast_default_charset(unsigned int id, char *buf)
+{
+	strcpy(buf, icecast_default_charset);
 }
 
 static void set_id3_default_charset(unsigned int id, const char *buf)
 {
 	free(id3_default_charset);
 	id3_default_charset = xstrdup(buf);
+}
+
+static void set_icecast_default_charset(unsigned int id, const char *buf)
+{
+	free(icecast_default_charset);
+	icecast_default_charset = xstrdup(buf);
 }
 
 static const struct {
@@ -863,6 +902,21 @@ static void toggle_wrap_search(unsigned int id)
 	wrap_search ^= 1;
 }
 
+static void get_skip_track_info(unsigned int id, char *buf)
+{
+	strcpy(buf, bool_names[skip_track_info]);
+}
+
+static void set_skip_track_info(unsigned int id, const char *buf)
+{
+	parse_bool(buf, &skip_track_info);
+}
+
+static void toggle_skip_track_info(unsigned int id)
+{
+	skip_track_info ^= 1;
+}
+
 
 /* }}} */
 
@@ -895,6 +949,79 @@ static void set_color(unsigned int id, const char *buf)
 		return;
 
 	colors[id] = color;
+	update_colors();
+	update_full();
+}
+
+static const char * const attr_enum_names[6 + 1] = {
+	"default",
+	"standout", "underline", "reverse", "blink", "bold",
+	NULL
+};
+
+static void get_attr(unsigned int id, char *buf)
+{
+	int attr = attrs[id];
+
+	if (attr == 0) {
+		strcpy(buf, "default");
+		return;
+	}
+
+	if (attr & A_STANDOUT)
+		strcat(buf, "standout|");
+
+	if (attr & A_UNDERLINE)
+		strcat(buf, "underline|");
+
+	if (attr & A_REVERSE)
+		strcat(buf, "reverse|");
+
+	if (attr & A_BLINK)
+		strcat(buf, "blink|");
+
+	if (attr & A_BOLD)
+		strcat(buf, "bold|");
+
+	buf[strlen(buf) - 1] = '\0';
+}
+
+static void set_attr(unsigned int id, const char *buf)
+{
+	int attr = 0;
+	size_t i = 0;
+	size_t offset = 0;
+	size_t length = 0;
+	char*  current;
+
+	do {
+		if (buf[i] == '|' || buf[i] == '\0') {
+			current = xstrndup(&buf[offset], length);
+
+			if (strcmp(current, "default") == 0)
+				attr |= A_NORMAL;
+			else if (strcmp(current, "standout") == 0)
+				attr |= A_STANDOUT;
+			else if (strcmp(current, "underline") == 0)
+				attr |= A_UNDERLINE;
+			else if (strcmp(current, "reverse") == 0)
+				attr |= A_REVERSE;
+			else if (strcmp(current, "blink") == 0)
+				attr |= A_BLINK;
+			else if (strcmp(current, "bold") == 0)
+				attr |= A_BOLD;
+
+			free(current);
+
+			offset = i;
+			length = -1;
+		}
+
+		i++;
+		length++;
+	} while (buf[i - 1] != '\0');
+
+	attrs[id] = attr;
 	update_colors();
 	update_full();
 }
@@ -966,10 +1093,12 @@ static const struct {
 	DT(auto_reshuffle)
 	DN_FLAGS(device, OPT_PROGRAM_PATH)
 	DN(buffer_seconds)
+	DN(scroll_offset)
 	DT(confirm_run)
 	DT(continue)
 	DT(smart_artist_sort)
 	DN(id3_default_charset)
+	DN(icecast_default_charset)
 	DN(lib_sort)
 	DN(output_plugin)
 	DN(passwd)
@@ -992,6 +1121,7 @@ static const struct {
 	DN(softvol_state)
 	DN_FLAGS(status_display_program, OPT_PROGRAM_PATH)
 	DT(wrap_search)
+	DT(skip_track_info)
 	{ NULL, NULL, NULL, NULL, 0 }
 };
 
@@ -1021,6 +1151,19 @@ static const char * const color_names[NR_COLORS] = {
 	"color_win_title_fg"
 };
 
+static const char * const attr_names[NR_ATTRS] = {
+	"color_cmdline_attr",
+	"color_statusline_attr",
+	"color_titleline_attr",
+	"color_win_attr",
+	"color_win_cur_sel_attr",
+	"color_cur_sel_attr",
+	"color_win_inactive_cur_sel_attr",
+	"color_win_inactive_sel_attr",
+	"color_win_sel_attr",
+	"color_win_title_attr"
+};
+
 /* default values for the variables which we must initialize but
  * can't do it statically */
 static const struct {
@@ -1041,6 +1184,7 @@ static const struct {
 	{ "lib_sort"	,	"albumartist date album discnumber tracknumber title filename" },
 	{ "pl_sort",		"" },
 	{ "id3_default_charset","ISO-8859-1" },
+	{ "icecast_default_charset","ISO-8859-1" },
 	{ NULL, NULL }
 };
 
@@ -1108,6 +1252,9 @@ void options_add(void)
 	for (i = 0; i < NR_COLORS; i++)
 		option_add(color_names[i], i, get_color, set_color, NULL, 0);
 
+	for (i = 0; i < NR_ATTRS; i++)
+		option_add(attr_names[i], i, get_attr, set_attr, NULL, 0);
+
 	ip_add_options();
 	op_add_options();
 }
@@ -1158,14 +1305,15 @@ void options_exit(void)
 {
 	struct cmus_opt *opt;
 	struct filter_entry *filt;
+	char filename_tmp[512];
 	char filename[512];
 	FILE *f;
 	int i;
 
-	snprintf(filename, sizeof(filename), "%s/autosave", cmus_config_dir);
-	f = fopen(filename, "w");
+	snprintf(filename_tmp, sizeof(filename_tmp), "%s/autosave.tmp", cmus_config_dir);
+	f = fopen(filename_tmp, "w");
 	if (f == NULL) {
-		warn_errno("creating %s", filename);
+		warn_errno("creating %s", filename_tmp);
 		return;
 	}
 
@@ -1205,6 +1353,11 @@ void options_exit(void)
 	fprintf(f, "\n");
 
 	fclose(f);
+
+	snprintf(filename, sizeof(filename), "%s/autosave", cmus_config_dir);
+	i = rename(filename_tmp, filename);
+	if (i)
+		warn_errno("renaming %s to %s", filename_tmp, filename);
 }
 
 struct resume {
@@ -1269,7 +1422,7 @@ void resume_load(void)
 		set_view(resume.view);
 	if (resume.lib_filename) {
 		cache_lock();
-		ti = old = cache_get_ti(resume.lib_filename);
+		ti = old = cache_get_ti(resume.lib_filename, 0);
 		cache_unlock();
 		if (ti) {
 			editable_lock();
@@ -1290,7 +1443,7 @@ void resume_load(void)
 	}
 	if (resume.filename) {
 		cache_lock();
-		ti = cache_get_ti(resume.filename);
+		ti = cache_get_ti(resume.filename, 0);
 		cache_unlock();
 		if (ti) {
 			player_set_file(ti);
@@ -1313,14 +1466,16 @@ void resume_load(void)
 
 void resume_exit(void)
 {
+	char filename_tmp[512];
 	char filename[512];
 	struct track_info *ti;
 	FILE *f;
+	int rc;
 
-	snprintf(filename, sizeof(filename), "%s/resume", cmus_config_dir);
-	f = fopen(filename, "w");
+	snprintf(filename_tmp, sizeof(filename_tmp), "%s/resume.tmp", cmus_config_dir);
+	f = fopen(filename_tmp, "w");
 	if (!f) {
-		warn_errno("creating %s", filename);
+		warn_errno("creating %s", filename_tmp);
 		return;
 	}
 
@@ -1344,4 +1499,9 @@ void resume_exit(void)
 	fprintf(f, "browser-dir %s\n", escape(browser_dir));
 
 	fclose(f);
+
+	snprintf(filename, sizeof(filename), "%s/resume", cmus_config_dir);
+	rc = rename(filename_tmp, filename);
+	if (rc)
+		warn_errno("renaming %s to %s", filename_tmp, filename);
 }
