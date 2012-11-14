@@ -442,8 +442,10 @@ static inline int track_parent_selected(struct tree_track *track)
 
 	if (window_get_sel(lib_tree_win, &sel))
 	{
-		return    (track->album         == iter_to_album(&sel)) 
-			   || (track->album->artist == iter_to_artist(&sel));
+		if (sel_row_type == ALBUM)
+			return track->album == iter_to_album(&sel);
+		else
+			return track->album->artist == iter_to_artist(&sel);
 	}
 	return 0;
 }
