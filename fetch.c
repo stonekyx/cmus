@@ -86,7 +86,7 @@ char * fetch(char *argv[])
 	} else {
 		/* parent */
 		int rc, errno_save;
-		char * err_buf=NULL, *out_buf=NULL;
+		char *err_buf=NULL, *out_buf=NULL;
 
 		close(err_pipe[1]);
 		close(out_pipe[1]);
