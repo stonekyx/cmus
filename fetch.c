@@ -90,7 +90,7 @@ char * fetch(char *argv[])
 
 		close(err_pipe[1]);
 		close(out_pipe[1]);
-		rc = really_read_all(err_pipe[0], (void **)&err_buf, 64);
+		rc = really_read_all(err_pipe[0], (char **)&err_buf, 64);
 		errno_save = errno;
 		close(err_pipe[0]);
 		if (rc == -1) {
