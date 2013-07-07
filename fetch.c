@@ -104,7 +104,7 @@ char * fetch(char *argv[])
 			return err_buf;
 		}
 
-		rc = really_read_all(out_pipe[0], (void **)&out_buf, 1024);
+		rc = really_read_all(out_pipe[0], (char **)&out_buf, 1024);
 		errno_save = errno;
 		close(out_pipe[0]);
 		if (rc == -1) {
