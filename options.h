@@ -63,6 +63,7 @@ enum {
 	QUEUE_VIEW,
 	BROWSER_VIEW,
 	FILTERS_VIEW,
+	LYRICS_VIEW,
 	HELP_VIEW,
 	NR_VIEWS
 };
@@ -177,6 +178,9 @@ extern char *window_title_alt_format;
 
 extern char *id3_default_charset;
 extern char *icecast_default_charset;
+
+/* lyrics fetch cmd */
+extern char *lyrics_cmd;
 
 /* build option list */
 void options_add(void);

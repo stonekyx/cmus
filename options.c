@@ -246,6 +246,7 @@ static const struct {
 	[NR_FMTS] =
 
 	{ "lib_sort", "albumartist date album discnumber tracknumber title filename play_count" },
+	{ "lyrics_cmd",	"ls -al" },
 	{ "pl_sort", "" },
 	{ "id3_default_charset", "ISO-8859-1" },
 	{ "icecast_default_charset", "ISO-8859-1" },
