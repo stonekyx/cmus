@@ -57,9 +57,11 @@ ssize_t really_read_all(int fd, char **buf, size_t size_hint)
 	ssize_t rc;
 
 	do {
-		if (size-pos < (ssize_t)size_hint)
-			*buf = xrealloc(buf,(pos += size_hint));
-    
+		if (size-pos < (ssize_t)size_hint){
+			*buf = xrealloc(*buf,pos + size_hint);
+      size = pos + size_hint;
+    }
+
 		rc = read(fd, (char *)*buf + pos, size_hint);
 		if (rc == -1) {
 			if (errno == EINTR || errno == EAGAIN)
@@ -69,7 +71,7 @@ ssize_t really_read_all(int fd, char **buf, size_t size_hint)
 		pos += rc;
 	} while (rc != 0);
 
-	*buf = xrealloc(buf, pos+1);
+	*buf = xrealloc(*buf, pos+1);
   *buf[pos]='\0';
 	
 	return pos;
