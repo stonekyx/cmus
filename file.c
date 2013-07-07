@@ -50,6 +50,31 @@ ssize_t read_all(int fd, void *buf, size_t count)
 	return pos;
 }
 
+ssize_t really_read_all(int fd, char **buf, size_t size_hint)
+{
+	ssize_t pos = 0;
+	ssize_t size = 0;
+	ssize_t rc;
+
+	do {
+		if (size-pos < (ssize_t)size_hint)
+			*buf = xrealloc(buf,(pos += size_hint));
+    
+		rc = read(fd, (char *)*buf + pos, size_hint);
+		if (rc == -1) {
+			if (errno == EINTR || errno == EAGAIN)
+				continue;
+			return -1;
+		}
+		pos += rc;
+	} while (rc != 0);
+
+	*buf = xrealloc(buf, pos+1);
+  *buf[pos]='\0';
+	
+	return pos;
+}
+
 ssize_t write_all(int fd, const void *buf, size_t count)
 {
 	const char *buffer = buf;

@@ -23,6 +23,7 @@
 #include <sys/types.h> /* ssize_t */
 
 ssize_t read_all(int fd, void *buf, size_t count);
+ssize_t really_read_all(int fd, char **buf, size_t size_hint);
 ssize_t write_all(int fd, const void *buf, size_t count);
 
 /* @filename  file to mmap for reading
