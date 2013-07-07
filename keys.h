@@ -38,6 +38,7 @@ enum key_context {
 	CTX_LIBRARY,
 	CTX_PLAYLIST,
 	CTX_QUEUE,
+	CTX_LYRICS,
 	CTX_SETTINGS,
 };
 #define NR_CTXS (CTX_SETTINGS + 1)
