@@ -27,6 +27,7 @@
 #include "browser.h"
 #include "filters.h"
 #include "player.h"
+#include "lyrics.h"
 #include "output.h"
 #include "editable.h"
 #include "lib.h"
@@ -40,6 +41,7 @@
 #include "misc.h"
 #include "path.h"
 #include "spawn.h"
+#include "fetch.h"
 #include "utils.h"
 #include "list.h"
 #include "debug.h"
@@ -361,6 +363,8 @@ struct window *current_win(void)
 		return browser_win;
 	case HELP_VIEW:
 		return help_win;
+	case LYRICS_VIEW:
+		return lyrics_win;
 	case FILTERS_VIEW:
 	default:
 		return filters_win;
@@ -1118,6 +1122,85 @@ static void cmd_shell(char *arg)
 		error_msg("executing '%s': %s", arg, strerror(errno));
 }
 
+static void cmd_fetch_lyrics(char *arg)
+{
+	char **av, **argv, *lyrics;
+	int ac, argc, i, files_idx = -1;
+	struct track_info_selection sel = { .tis = NULL };
+
+	if (cur_view > QUEUE_VIEW) {
+		info_msg("Fetching lyrics is supported only in views 1-4");
+		return;
+	}
+
+	av = parse_cmd(lyrics_cmd, &files_idx, &ac);
+	if (av == NULL) {
+		info_msg("You need to set fetch_cmd");
+		return;
+	}
+
+	editable_lock();
+	switch (cur_view) {
+	case TREE_VIEW:
+		__tree_for_each_sel(add_ti, &sel, 0);
+		break;
+	case SORTED_VIEW:
+		__editable_for_each_sel(&lib_editable, add_ti, &sel, 0);
+		break;
+	case PLAYLIST_VIEW:
+		__editable_for_each_sel(&pl_editable, add_ti, &sel, 0);
+		break;
+	case QUEUE_VIEW:
+		__editable_for_each_sel(&pq_editable, add_ti, &sel, 0);
+		break;
+	}
+	editable_unlock();
+
+	if (sel.tis_nr == 0) {
+		/* no files selected, do nothing */
+		free_str_array(av);
+		return;
+	} else if (sel.tis_nr >1) {
+		/* It's not sensible to fetch and display lyrics for more than one file */
+		free_str_array(av);
+		for (i = 0; sel.tis[i]; i++)
+			track_info_unref(sel.tis[i]);
+		info_msg("You can only fetch the lyrics for one file");
+		return;
+	}
+	
+	/* build argv */
+	argv = xnew(char *, ac + sel.tis_nr + 1);
+	argc = 0;
+	if (files_idx == -1) {
+		/* add selected file after rest of the args if no position selected */
+		for (i = 0; i < ac; i++)
+			argv[argc++] = av[i];
+		argv[argc++] = sel.tis[i]->filename;
+	} else {
+		for (i = 0; i < files_idx; i++)
+			argv[argc++] = av[i];
+		argv[argc++] = sel.tis[i]->filename;
+		for (i = files_idx; i < ac; i++)
+			argv[argc++] = av[i];
+	}
+	argv[argc] = NULL;
+
+	for (i = 0; argv[i]; i++)
+		d_print("ARG: '%s'\n", argv[i]);
+
+	if (!(lyrics=fetch(argv))) {
+		error_msg("executing %s failed", argv[0]);
+	} else {
+		lyrics_show(lyrics);
+	}
+
+	free_str_array(av);
+	free(argv);
+	track_info_unref(sel.tis[0]);
+	free(sel.tis);
+}
+
 static int get_one_ti(void *data, struct track_info *ti)
 {
 	struct track_info **sel_ti = data;
@@ -1126,7 +1209,7 @@ static int get_one_ti(void *data, struct track_info *ti)
 	*sel_ti = ti;
 	/* stop the for each loop, we need only the first selected track */
 	return 1;
-}
+} 
 
 static void cmd_echo(char *arg)
 {
@@ -1563,6 +1646,9 @@ static void cmd_win_activate(char *arg)
 	case FILTERS_VIEW:
 		filters_activate();
 		break;
+	case LYRICS_VIEW:
+		filters_activate();
+		break;
 	case HELP_VIEW:
 		help_select();
 		break;
@@ -1601,6 +1687,8 @@ static void cmd_win_mv_after(char *arg)
 		break;
 	case FILTERS_VIEW:
 		break;
+	case LYRICS_VIEW:
+		break;
 	case HELP_VIEW:
 		break;
 	}
@@ -1625,6 +1713,8 @@ static void cmd_win_mv_before(char *arg)
 	case BROWSER_VIEW:
 		break;
 	case FILTERS_VIEW:
+		break;
+	case LYRICS_VIEW:
 		break;
 	case HELP_VIEW:
 		break;
@@ -1679,6 +1769,8 @@ static void cmd_win_sel_cur(char *arg)
 	case BROWSER_VIEW:
 		break;
 	case FILTERS_VIEW:
+    break;
+	case LYRICS_VIEW:
 		break;
 	case HELP_VIEW:
 		break;
@@ -1714,6 +1806,8 @@ static void cmd_win_toggle(char *arg)
 	case FILTERS_VIEW:
 		filters_toggle_filter();
 		break;
+	case LYRICS_VIEW:
+    break;
 	case HELP_VIEW:
 		help_toggle();
 		break;
@@ -2617,6 +2711,7 @@ struct command commands[] = {
 	{ "colorscheme",	cmd_colorscheme,1, 1, expand_colorscheme, 0, 0 },
 	{ "echo",		cmd_echo,	1,-1, NULL,		  0, 0 },
 	{ "factivate",		cmd_factivate,	0, 1, expand_factivate,	  0, 0 },
+	{ "fetch-lyrics",		cmd_fetch_lyrics,	0, 0, NULL, 0, CMD_UNSAFE },
 	{ "filter",		cmd_filter,	0, 1, NULL,		  0, 0 },
 	{ "fset",		cmd_fset,	1, 1, expand_fset,	  0, 0 },
 	{ "help",		cmd_help,	0, 0, NULL,		  0, 0 },
