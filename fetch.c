@@ -18,6 +18,8 @@
 
 #include "fetch.h"
 #include "file.h"
+#include "xmalloc.h"
+#include "debug.h"
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -49,7 +51,7 @@ char * fetch(char *argv[])
 		/* child */
 		int err, i;
 
-		/* whatever madness this is, let's not interfer */
+		/* why is this necessary, let's just copy and forget about it */
 		/* create grandchild and exit child to avoid zombie processes */
 		switch (fork()) {
 		case 0:
@@ -90,28 +92,30 @@ char * fetch(char *argv[])
 
 		close(err_pipe[1]);
 		close(out_pipe[1]);
-		rc = really_read_all(err_pipe[0], (char **)&err_buf, 64);
+		rc = really_read_all(err_pipe[0], &err_buf, 64);
 		errno_save = errno;
 		close(err_pipe[0]);
 		if (rc == -1) {
 			close(out_pipe[0]);
 			free(err_buf);
 			errno = errno_save;
+			d_print("reading the error output gave an error, shouldn't happen\n");
 			return NULL;
 		}
 		if (strlen(err_buf)>0){
-				close(out_pipe[0]);
+			close(out_pipe[0]);
+			d_print("Command produced the following error %s\n", err_buf);
 			return err_buf;
 		}
 
-		rc = really_read_all(out_pipe[0], (char **)&out_buf, 1024);
+		rc = really_read_all(out_pipe[0], &out_buf, 1024);
 		errno_save = errno;
 		close(out_pipe[0]);
 		if (rc == -1) {
 			free(out_buf);
 			errno = errno_save;
-			return NULL;
+			return xstrdup("Command produced no output\n");
 		}
-		return 0;
+		return out_buf;
 	}
 }
