@@ -18,6 +18,7 @@
 
 #include "file.h"
 #include "xmalloc.h"
+#include "debug.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -26,6 +27,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <stdio.h>
 
 ssize_t read_all(int fd, void *buf, size_t count)
 {
@@ -58,9 +60,11 @@ ssize_t really_read_all(int fd, char **buf, size_t size_hint)
 
 	do {
 		if (size-pos < (ssize_t)size_hint){
-			*buf = xrealloc(*buf,pos + size_hint);
-      size = pos + size_hint;
-    }
+			printf("before %p \n", *buf);
+			*buf = xrealloc(*buf, pos + size_hint);
+			printf("after %p \n", *buf);
+			size = pos + size_hint;
+		}
 
 		rc = read(fd, (char *)*buf + pos, size_hint);
 		if (rc == -1) {
@@ -71,8 +75,10 @@ ssize_t really_read_all(int fd, char **buf, size_t size_hint)
 		pos += rc;
 	} while (rc != 0);
 
+	printf("ende before %p ,pos %d, size %d\n", *buf, pos, size);
 	*buf = xrealloc(*buf, pos+1);
-  *buf[pos]='\0';
+	printf("ende after %p \n", *buf);
+	(*buf)[pos]='\0';
 	
 	return pos;
 }

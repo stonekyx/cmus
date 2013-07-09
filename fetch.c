@@ -106,7 +106,8 @@ char * fetch(char *argv[])
 			close(out_pipe[0]);
 			d_print("Command produced the following error %s\n", err_buf);
 			return err_buf;
-		}
+		} else 
+			free(err_buf);
 
 		rc = really_read_all(out_pipe[0], &out_buf, 1024);
 		errno_save = errno;
