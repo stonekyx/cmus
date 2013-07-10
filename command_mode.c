@@ -1122,85 +1122,6 @@ static void cmd_shell(char *arg)
 		error_msg("executing '%s': %s", arg, strerror(errno));
 }
 
-static void cmd_fetch_lyrics(char *arg)
-{
-	char **av, **argv, *lyrics;
-	int ac, argc, i, files_idx = -1;
-	struct track_info_selection sel = { .tis = NULL };
-
-	if (cur_view > QUEUE_VIEW) {
-		info_msg("Fetching lyrics is supported only in views 1-4");
-		return;
-	}
-
-	av = parse_cmd(lyrics_cmd, &files_idx, &ac);
-	if (av == NULL) {
-		info_msg("You need to set fetch_cmd");
-		return;
-	}
-
-	editable_lock();
-	switch (cur_view) {
-	case TREE_VIEW:
-		__tree_for_each_sel(add_ti, &sel, 0);
-		break;
-	case SORTED_VIEW:
-		__editable_for_each_sel(&lib_editable, add_ti, &sel, 0);
-		break;
-	case PLAYLIST_VIEW:
-		__editable_for_each_sel(&pl_editable, add_ti, &sel, 0);
-		break;
-	case QUEUE_VIEW:
-		__editable_for_each_sel(&pq_editable, add_ti, &sel, 0);
-		break;
-	}
-	editable_unlock();
-
-	if (sel.tis_nr == 0) {
-		/* no files selected, do nothing */
-		free_str_array(av);
-		return;
-	} else if (sel.tis_nr >1) {
-		/* It's not sensible to fetch and display lyrics for more than one file */
-		free_str_array(av);
-		for (i = 0; sel.tis[i]; i++)
-			track_info_unref(sel.tis[i]);
-		info_msg("You can only fetch the lyrics for one file");
-		return;
-	}
-	
-	/* build argv */
-	argv = xnew(char *, ac + sel.tis_nr + 1);
-	argc = 0;
-	if (files_idx == -1) {
-		/* add selected file after rest of the args if no position selected */
-		for (i = 0; i < ac; i++)
-			argv[argc++] = av[i];
-		argv[argc++] = sel.tis[i]->filename;
-	} else {
-		for (i = 0; i < files_idx; i++)
-			argv[argc++] = av[i];
-		argv[argc++] = sel.tis[i]->filename;
-		for (i = files_idx; i < ac; i++)
-			argv[argc++] = av[i];
-	}
-	argv[argc] = NULL;
-
-	for (i = 0; argv[i]; i++)
-		d_print("ARG: '%s'\n", argv[i]);
-
-	if (!(lyrics=fetch(argv))) {
-		error_msg("executing %s failed", argv[0]);
-	} else {
-		lyrics_show(lyrics);
-	}
-
-	free_str_array(av);
-	free(argv);
-	track_info_unref(sel.tis[0]);
-	free(sel.tis);
-}
-
 static int get_one_ti(void *data, struct track_info *ti)
 {
 	struct track_info **sel_ti = data;
@@ -1263,6 +1184,83 @@ static void cmd_echo(char *arg)
 
 	info_msg("%s%s%s", arg, sel_ti->filename, ptr);
 	track_info_unref(sel_ti);
+}
+
+static void cmd_fetch_lyrics(char *arg)
+{
+	char **av, **argv, *lyrics;
+	int ac, argc, i, files_idx = -1;
+	struct track_info *sel;
+
+	if (cur_view > QUEUE_VIEW) {
+		info_msg("Fetching lyrics is supported only in views 1-4");
+		return;
+	}
+
+	av = parse_cmd(lyrics_cmd, &files_idx, &ac);
+	if (av == NULL) {
+		info_msg("You need to set fetch_cmd");
+		return;
+	}
+
+	editable_lock();
+	switch (cur_view) {
+	case TREE_VIEW:
+		__tree_for_each_sel(get_one_ti, &sel, 0);
+		break;
+	case SORTED_VIEW:
+		__editable_for_each_sel(&lib_editable, get_one_ti, &sel, 0);
+		break;
+	case PLAYLIST_VIEW:
+		__editable_for_each_sel(&pl_editable, get_one_ti, &sel, 0);
+		break;
+	case QUEUE_VIEW:
+		__editable_for_each_sel(&pq_editable, get_one_ti, &sel, 0);
+		break;
+	}
+	editable_unlock();
+
+	if (sel == NULL) {
+		/* no files selected, do nothing */
+		free_str_array(av);
+		return;
+	}
+
+	info_msg("Fetching lyrics for %s\n", sel->filename);
+
+	/* build argv */
+	argv = xnew(char *, ac + 2);
+	argc = 0;
+	if (files_idx == -1) {
+		/* add selected file after rest of the args if no position selected */
+		for (i = 0; i < ac; i++)
+			argv[argc++] = av[i];
+		argv[argc++] = sel->filename;
+	} else {
+		for (i = 0; i < files_idx; i++)
+			argv[argc++] = av[i];
+		argv[argc++] = sel->filename;
+		for (i = files_idx; i < ac; i++)
+			argv[argc++] = av[i];
+	}
+	argv[argc] = NULL;
+
+	for (i = 0; argv[i]; i++)
+		d_print("ARG: '%s'\n", argv[i]);
+
+	if (!(lyrics=fetch(argv))) {
+		error_msg("executing %s failed", argv[0]);
+	} else {
+		lyrics_show(lyrics);
+		free(lyrics);
+	}
+
+	prev_view = cur_view;
+	set_view(LYRICS_VIEW);
+
+	free_str_array(av);
+	free(argv);
+	track_info_unref(sel);
 }
 
 #define VF_RELATIVE	0x01
