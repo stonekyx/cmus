@@ -1,0 +1,22 @@
+{  
+  asound_malloc
+  Memcheck:Leak
+  ...
+  obj:*libasound.so*
+  ...
+}
+
+{
+  libstdcpp 
+  Memcheck:Leak
+  ...
+  obj:*libstdc++.so.*
+  ...
+}
+{
+  stupid arch ld problems
+  Memcheck:Leak
+  ...
+  obj:/usr/lib/ld-2.17.so
+  ...
+}
