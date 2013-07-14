@@ -1,8 +1,5 @@
 /*
- * Copyright 2008-2011 Various Authors
- * Copyright 2006 <ft@bewatermyfriend.org>
- *
- * heavily based on filters.c
+ * Copyright 2013 <max@fs.lmu.de>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -28,6 +25,7 @@
 #include "ui_curses.h"
 #include "options.h"
 #include "cmdline.h"
+#include "debug.h"
 
 #include <stdio.h>
 
@@ -56,7 +54,8 @@ static int lyrics_search_get_current(void *data, struct iter *iter)
 static int lyrics_search_matches(void *data, struct iter *iter, const char *text)
 {
 	int matched = 0;
-	char **words = get_words(text);
+	char **words;
+	words = get_words(text);
 
 	if (words[0] != NULL) {
 		struct lyrics_entry *ent;
@@ -86,44 +85,57 @@ static const struct searchable_ops lyrics_search_ops = {
 
 void lyrics_clear(void)
 {
-	struct lyrics_entry *ent = list_entry(&lyrics_head, struct lyrics_entry, node);
-	const char * line = ent->line;
-	list_for_each_entry(ent, &lyrics_head, node)
+	struct lyrics_entry *ent, *tmp;
+
+	list_for_each_entry_safe(ent, tmp, &lyrics_head, node){
+		list_del(&(ent->node));
+		free((char *)ent->line);
 		free(ent);
-	free((char *)line);
+	}
 }
 
 void lyrics_add_line(const char *line)
 {
 	struct lyrics_entry *ent;
 	ent = xnew(struct lyrics_entry, 1);
-	ent->line = line;
+	ent->line = xstrdup(line);
+	d_print("new: %p %d %p %p %s\n", ent, sizeof (struct lyrics_entry), &ent->line, ent->line, ent->line);
 	list_add_tail(&ent->node, &lyrics_head);
 }
 
 void lyrics_show(const char *lines)
 {
-	char * save_ptr = xstrdup(lines);
-	char * line = strtok_r(save_ptr, "\n", &save_ptr);
+	char *line, *save_ptr, *line_bak;
+	struct lyrics_entry *ent;
+
+	d_print("before clear:\n");
+	list_for_each_entry(ent, &lyrics_head, node)
+		d_print("lyrics entries: %s %p %d %p\n", ent->line, ent, sizeof (struct lyrics_entry), ent->line);
+	lyrics_clear();
+
+	d_print("after clear:\n");
+	list_for_each_entry(ent, &lyrics_head, node)
+		d_print("lyrics entries: %s\n", ent->line);
+	d_print("head->next %p, head->prev %p, head %p\n", &lyrics_head.next, &lyrics_head.prev, &lyrics_head);
+	line_bak = xstrdup(lines);
+	line = strtok_r(line_bak, "\n", &save_ptr);
 	/* we expect the lines to be newline separated */
 	while (line){
 		lyrics_add_line(line);
 		line = strtok_r(NULL, "\n", &save_ptr);
 	}
+	free(line_bak);
 }
 
 void lyrics_init(void)
 {
 	struct iter iter;
-	char * msg;
 
 	lyrics_win = window_new(lyrics_get_prev, lyrics_get_next);
 	window_set_contents(lyrics_win, &lyrics_head);
 	window_changed(lyrics_win);
-	msg = xmalloc (100);
-	sprintf(msg,"%s %s", "No lyrics found yet. To search, select a track/file",
+	lyrics_add_line("No lyrics found yet. To search, select a track/file "\
 		"in view 1-4 and use fetch_lyrics");
-	lyrics_add_line(msg);
 
 	iter.data0 = &lyrics_head;
 	iter.data1 = NULL;
