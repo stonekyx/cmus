@@ -29,8 +29,10 @@
 #include <errno.h>
 #include <string.h>
 
-/* Quick and dirty implementation, the error output should be separate from the status 
- * Plus more error output to differentiate the null cases, yada, yada*/
+/* On a non zero return we return the hopefully meaningful error messages from 
+ * stderr, in the other case we ignore it. this is on purpose because some tools
+ * spam stderr with interactive crap but we want to save us a shell invocation 
+ * for 2>/dev/null */
 char * fetch(char *argv[])
 {
 	pid_t pid;
@@ -42,7 +44,6 @@ char * fetch(char *argv[])
 	if (pipe(out_pipe) == -1)
 		return NULL;
 
-
 	pid = fork();
 	if (pid == -1) {
 		/* error */
@@ -50,20 +51,6 @@ char * fetch(char *argv[])
 	} else if (pid == 0) {
 		/* child */
 		int err, i;
-
-		/* why is this necessary, let's just copy and forget about it */
-		/* create grandchild and exit child to avoid zombie processes */
-		switch (fork()) {
-		case 0:
-			/* grandchild */
-			break;
-		case -1:
-			/* error */
-			_exit(127);
-		default:
-			/* parent of grandchild */
-			_exit(0);
-		}
 
 		close(err_pipe[0]);
 		close(out_pipe[0]);
@@ -81,43 +68,43 @@ char * fetch(char *argv[])
 
 		execvp(argv[0], argv);
 
-		/* error */
+		/* error execing */
 		err = errno;
 		write_all(err_pipe[1], &err, sizeof(int));
 		exit(1);
 	} else {
 		/* parent */
-		int rc, errno_save;
+		int rc, errno_save, status;
 		char *err_buf=NULL, *out_buf=NULL;
 
 		close(err_pipe[1]);
 		close(out_pipe[1]);
 
-		rc = really_read_all(err_pipe[0], &err_buf, 64);
-		errno_save = errno;
-		close(err_pipe[0]);
-		if (rc == -1) {
+		if (waitpid(pid, &status, 0) == -1){
 			close(out_pipe[0]);
-			free(err_buf);
-			errno = errno_save;
-			d_print("reading the error output gave an error, shouldn't happen\n");
-			return NULL;
-		}
-		if (strlen(err_buf)>0){
-			close(out_pipe[0]);
-			d_print("Command produced the following error %s\n", err_buf);
+			rc = really_read_all(err_pipe[0], &err_buf, 64);
+			errno_save = errno;
+			close(err_pipe[0]);
+			if (rc == -1) {
+				free(err_buf);
+				errno = errno_save;
+				d_print("Reading the error output for a fetch cmd gave an error, %s",
+					       "shouldn't happen\n");
+				return NULL;
+			}
+			d_print("Fetch command produced the following error %s\n", err_buf);
 			return err_buf;
-		} else 
-			free(err_buf);
-
-		rc = really_read_all(out_pipe[0], &out_buf, 1024);
-		errno_save = errno;
-		close(out_pipe[0]);
-		if (rc == -1) {
-			free(out_buf);
-			errno = errno_save;
-			return xstrdup("Command produced no output\n");
+		} else {
+			close(err_pipe[0]);
+			rc = really_read_all(out_pipe[0], &out_buf, 1024);
+			errno_save = errno;
+			close(out_pipe[0]);
+			if (rc == -1) {
+				free(out_buf);
+				errno = errno_save;
+				return xstrdup("Command produced no output\n");
+			}
+			return out_buf;
 		}
-		return out_buf;
 	}
 }
