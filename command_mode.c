@@ -57,6 +57,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <dirent.h>
+#include <string.h>
+#include <wordexp.h>
 
 static struct history cmd_history;
 static char *cmd_history_filename;
@@ -1186,20 +1188,79 @@ static void cmd_echo(char *arg)
 	track_info_unref(sel_ti);
 }
 
+static char **parse_lyrics_cmd(char *cmd, struct track_info *sel)
+{
+	char **av = NULL, *arg, *save_ptr, templ_var;
+	int nr = 0, alloc = 0;
+
+	cmd = xstrdup(cmd);
+	arg = strtok_r(cmd, " \t", &save_ptr);
+	while (arg) {
+    d_print("analyzing %s\n", arg);
+		if (nr == alloc) {
+					alloc = alloc ? alloc * 2 : 4;
+					av = (char **)xrenew(char *, av, alloc + 1);
+		}	/* we make the mild assumption that standalone arguments of the form \$. are 
+ * meant for us*/
+		if (*arg == '$' && (templ_var = arg[1]) && !(arg[2])) {
+			switch(templ_var){
+			case 'f':
+				av[nr++] = xstrdup(sel->filename);
+				break;
+			case 'a':
+				/* BUGBUG should we use albumartist if artist isn't set? */
+				if (sel->artist)
+					av[nr++] = xstrdup(sel->artist);
+				else 
+					/* Since the whining was about keeping this general, let's not presume,
+					* that a song without certain tags can't be used, but make it explicit
+					* (glyrc needs this or it considers the next token an argument even if it
+					* starts with --) this may conflict with other tools - make it an option?*/
+					av[nr++] = xstrdup("\"\"");
+				break;
+			case 'b':
+				if (sel->album)
+					av[nr++] = xstrdup(sel->album);
+				else
+					av[nr++] = xstrdup("\"\"");
+				break;
+			case 't':
+				if (sel->album)
+					av[nr++] = xstrdup(sel->title);
+				else
+					av[nr++] = xstrdup("\"\"");
+				break;
+			default:
+				error_msg("unrecognized replacement sequence $%c, %s", arg[1],
+				            "only $f, $a, $b and $t are supported");
+				while (nr > 0)
+					free(av[--nr]);
+				free(av);
+				return NULL;
+			}
+		} else {
+			wordexp_t p;
+			wordexp(arg, &p, 0);
+			for (int i = 0; i< p.we_wordc; i++)
+				av[nr++] = xstrdup(p.we_wordv[i]);
+			wordfree(&p);
+		}
+		arg = strtok_r(NULL, " \t", &save_ptr);
+	}
+
+	av[nr] = NULL;
+	free(cmd);
+	return av;
+}
+
 static void cmd_fetch_lyrics(char *arg)
 {
-	char **av, **argv, *lyrics;
-	int ac, argc, i, files_idx = -1;
+	char **av = NULL, *lyrics;
+	int i;
 	struct track_info *sel;
 
 	if (cur_view > QUEUE_VIEW) {
 		info_msg("Fetching lyrics is supported only in views 1-4");
-		return;
-	}
-
-	av = parse_cmd(lyrics_cmd, &files_idx, &ac);
-	if (av == NULL) {
-		info_msg("You need to set fetch_cmd");
 		return;
 	}
 
@@ -1227,29 +1288,18 @@ static void cmd_fetch_lyrics(char *arg)
 	}
 
 	info_msg("Fetching lyrics for %s\n", sel->filename);
-
-	/* build argv */
-	argv = xnew(char *, ac + 2);
-	argc = 0;
-	if (files_idx == -1) {
-		/* add selected file after rest of the args if no position selected */
-		for (i = 0; i < ac; i++)
-			argv[argc++] = av[i];
-		argv[argc++] = sel->filename;
-	} else {
-		for (i = 0; i < files_idx; i++)
-			argv[argc++] = av[i];
-		argv[argc++] = sel->filename;
-		for (i = files_idx; i < ac; i++)
-			argv[argc++] = av[i];
+	if ((av = parse_lyrics_cmd(lyrics_cmd, sel)) == NULL)
+		return;
+	if (*av == NULL) {
+		error_msg("You didn't yet set fetch_cmd");
+		return;
 	}
-	argv[argc] = NULL;
 
-	for (i = 0; argv[i]; i++)
-		d_print("ARG: '%s'\n", argv[i]);
+	for (i = 0; av[i]; i++)
+		d_print("ARG: '%s'\n", av[i]);
 
-	if (!(lyrics=fetch(argv))) {
-		error_msg("executing %s failed", argv[0]);
+	if (!(lyrics=fetch(av))) {
+		error_msg("executing %s failed", av[0]);
 	} else {
 		lyrics_show(lyrics);
 		free(lyrics);
@@ -1258,8 +1308,8 @@ static void cmd_fetch_lyrics(char *arg)
 	prev_view = cur_view;
 	set_view(LYRICS_VIEW);
 
-	free_str_array(av);
-	free(argv);
+	free(av);
+	free(av);
 	track_info_unref(sel);
 }
 
