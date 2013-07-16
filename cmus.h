@@ -30,6 +30,7 @@
 #define JOB_TYPE_LIB	1
 #define JOB_TYPE_PL	2
 #define JOB_TYPE_QUEUE	3
+#define JOB_TYPE_LYRICS	4
 
 enum file_type {
 	/* not found, device file... */

@@ -21,6 +21,8 @@
 
 #define JOB_TYPE_NONE	0
 #define JOB_TYPE_ANY	-1
+#define JOB_TYPE_ANY_SONGS	-2
+#define JOB_TYPE_LYRICS	4
 
 void worker_init(void);
 void worker_exit(void);

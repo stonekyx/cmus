@@ -162,12 +162,14 @@ int worker_has_job(int type)
 
 	worker_lock();
 	list_for_each_entry(job, &worker_job_head, node) {
-		if (type == JOB_TYPE_ANY || type == job->type) {
+		if (type == JOB_TYPE_ANY || type == job->type || 
+			(type == JOB_TYPE_ANY_SONGS && job->type != JOB_TYPE_LYRICS)) {
 			has_job = 1;
 			break;
 		}
 	}
-	if (cur_job && (type == JOB_TYPE_ANY || type == cur_job->type))
+	if (cur_job && (type == JOB_TYPE_ANY || type == cur_job->type ||
+			(type == JOB_TYPE_ANY_SONGS && cur_job->type != JOB_TYPE_LYRICS)))
 		has_job = 1;
 	worker_unlock();
 	return has_job;
