@@ -93,12 +93,11 @@ char * fetch(char *argv[])
 						d_print("error reading signalfd");
 						exit(EXIT_FAILURE);
 					}
+					/* if we are hit with a signal we, kill our child and exit, 
+					 effectively orphaning the child on top */
 					if (fdsi.ssi_signo == SIGINT || fdsi.ssi_signo == SIGQUIT ||
 						fdsi.ssi_signo == SIGUSR1) {
-						d_print("we are asked to kill our poor child\n");
 						kill(pid, SIGTERM);
-						usleep(200000);
-						kill(pid, SIGKILL);
 						exit(EXIT_SUCCESS);
 					} else if (fdsi.ssi_signo == SIGCHLD) {
 						exit(EXIT_SUCCESS);
