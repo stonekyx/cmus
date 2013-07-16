@@ -53,6 +53,7 @@ struct command {
 
 extern struct command commands[];
 extern int run_only_safe_commands;
+extern int prev_view;
 
 void command_mode_ch(uchar ch);
 void command_mode_escape(int c);
