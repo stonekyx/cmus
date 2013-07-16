@@ -63,6 +63,7 @@ void track_info_set_comments(struct track_info *ti, struct keyval *comments) {
 	ti->artist = keyvals_get_val(comments, "artist");
 	ti->album = keyvals_get_val(comments, "album");
 	ti->title = keyvals_get_val(comments, "title");
+	ti->lyrics = keyvals_get_val(comments, "lyrics");
 	ti->tracknumber = comments_get_int(comments, "tracknumber");
 	ti->discnumber = comments_get_int(comments, "discnumber");
 	ti->date = comments_get_date(comments, "date");
