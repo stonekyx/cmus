@@ -39,11 +39,16 @@ struct update_cache_data {
 	unsigned int force : 1;
 };
 
+struct update_lyrics_data {
+	struct track_info *ti;
+};
+
 void do_add_job(void *data);
 void free_add_job(void *data);
 void do_update_job(void *data);
 void free_update_job(void *data);
 void do_update_cache_job(void *data);
 void free_update_cache_job(void *data);
-
+void do_update_lyrics_job(void *data);
+void free_update_lyrics_job(void *data);
 #endif

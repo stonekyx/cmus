@@ -27,13 +27,17 @@
 #include "pl.h"
 #include "play_queue.h"
 #include "lib.h"
+#include "lyrics.h"
+#include "ui_curses.h"
 #include "utils.h"
+#include "fetch.h"
 #include "file.h"
 #include "cache.h"
 #include "player.h"
 #include "discid.h"
 #include "xstrjoin.h"
 #include "ui_curses.h"
+#include "options.h"
 #ifdef HAVE_CONFIG
 #include "config/cue.h"
 #endif
@@ -45,6 +49,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/mman.h>
+#include <wordexp.h>
+#include <stdio.h>
 
 static struct track_info *ti_buffer[32];
 static int ti_buffer_fill;
@@ -407,4 +413,114 @@ void free_update_cache_job(void *data)
 {
 	free(data);
 	ui_curses_notify();
+}
+
+static char **parse_lyrics_cmd(char *cmd, struct track_info *sel)
+{
+	char **av = NULL, *arg, *save_ptr, templ_var;
+	int nr = 0, alloc = 0;
+
+	cmd = xstrdup(cmd);
+	arg = strtok_r(cmd, " \t", &save_ptr);
+	while (arg) {
+		if (nr == alloc) {
+					alloc = alloc ? alloc * 2 : 4;
+					av = (char **)xrenew(char *, av, alloc + 1);
+		}	/* we make the mild assumption that standalone arguments of the form \$. are 
+ * meant for us*/
+		if (*arg == '$' && (templ_var = arg[1]) && !(arg[2])) {
+			switch(templ_var){
+			case 'f':
+				av[nr++] = xstrdup(sel->filename);
+				break;
+			case 'a':
+				/* BUGBUG should we use albumartist if artist isn't set? */
+				if (sel->artist)
+					av[nr++] = xstrdup(sel->artist);
+				else 
+					/* Since the whining was about keeping this general, let's not presume,
+					* that a song without certain tags can't be used, but make it explicit
+					* (glyrc needs this or it considers the next token an argument even if it
+					* starts with --) this may conflict with other tools - make it an option?*/
+					av[nr++] = xstrdup("\"\"");
+				break;
+			case 'b':
+				if (sel->album)
+					av[nr++] = xstrdup(sel->album);
+				else
+					av[nr++] = xstrdup("\"\"");
+				break;
+			case 't':
+				if (sel->album)
+					av[nr++] = xstrdup(sel->title);
+				else
+					av[nr++] = xstrdup("\"\"");
+				break;
+			default:
+				error_msg("unrecognized replacement sequence $%c, %s", arg[1],
+				            "only $f, $a, $b and $t are supported");
+				while (nr > 0)
+					free(av[--nr]);
+				free(av);
+        free(cmd);
+				return NULL;
+			}
+		} else {
+			wordexp_t p;
+			wordexp(arg, &p, 0);
+			for (int i = 0; i< p.we_wordc; i++)
+				av[nr++] = xstrdup(p.we_wordv[i]);
+			wordfree(&p);
+		}
+		arg = strtok_r(NULL, " \t", &save_ptr);
+	}
+
+	if (av)
+		av[nr] = NULL;
+	free(cmd);
+	return av;
+}
+
+void do_update_lyrics_job(void *data)
+{
+	char **av = NULL, *lyrics = NULL, *msg, *line;
+	struct update_lyrics_data * con = data;
+	struct track_info * ti = con->ti;
+
+	if (ti->lyrics && strcmp(ti->lyrics, "")) {
+		lyrics_show(ti->lyrics);
+	} else {
+		line = xmalloc(25 + strlen(ti->filename));
+		/* no new lines here, they would be escaped and displayed */
+		sprintf(line, "Fetching lyrics for %s", ti->filename);
+		lyrics_add_line(line);
+		free(line);
+
+		if ((av = parse_lyrics_cmd(lyrics_cmd, ti)) == NULL)
+			return;
+		if (*av == NULL) {
+			error_msg("You didn't yet set fetch_cmd");
+			return;
+		}
+
+		if (!(lyrics=fetch(av))) {
+			error_msg("executing %s failed", av[0]);
+		} else {
+			if (strcmp(lyrics, ""))
+				lyrics_show(lyrics);
+			else{
+				lyrics_show((msg=xstrdup("Sorry, no lyrics found")));
+				free(msg);
+			}
+		}
+		for (int i = 0; av[i] ; i++)
+			free(av[i]);
+		free(av);
+		free(lyrics);
+	}
+	track_info_unref(ti);
+}
+void free_update_lyrics_job(void *data)
+{
+	free(data);
 }
