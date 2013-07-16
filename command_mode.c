@@ -1191,7 +1191,7 @@ static void cmd_echo(char *arg)
 	track_info_unref(sel_ti);
 }
 
-static void cmd_fetch_lyrics(char *arg)
+static void cmd_lyrics_fetch(char *arg)
 {
 	struct track_info *sel;
 	struct update_lyrics_data *job;
@@ -2680,7 +2680,7 @@ struct command commands[] = {
 	{ "colorscheme",	cmd_colorscheme,1, 1, expand_colorscheme, 0, 0 },
 	{ "echo",		cmd_echo,	1,-1, NULL,		  0, 0 },
 	{ "factivate",		cmd_factivate,	0, 1, expand_factivate,	  0, 0 },
-	{ "fetch-lyrics",		cmd_fetch_lyrics,	0, 0, NULL, 0, CMD_UNSAFE },
+	{ "lyrics-fetch",		cmd_lyrics_fetch,	0, 0, NULL, 0, CMD_UNSAFE },
 	{ "filter",		cmd_filter,	0, 1, NULL,		  0, 0 },
 	{ "fset",		cmd_fset,	1, 1, expand_fset,	  0, 0 },
 	{ "help",		cmd_help,	0, 0, NULL,		  0, 0 },

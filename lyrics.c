@@ -136,7 +136,7 @@ void lyrics_init(void)
 
 	lyrics_win = window_new(lyrics_get_prev, lyrics_get_next);
 	lyrics_add_line("No lyrics searched yet. To search, select a track/file "\
-		"in view 1-4 and use fetch_lyrics");
+		"in view 1-4 and use lyrics-fetch");
 
 	iter.data0 = &lyrics_head;
 	iter.data1 = NULL;
