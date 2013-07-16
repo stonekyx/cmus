@@ -432,6 +432,13 @@ void u_set_char(char *str, int *idx, uchar uch)
 {
 	int i = *idx;
 
+	// newlines are explicitely allowed in comments and the like
+	if (uch == 0x0000000aU){
+		str[i++] = uch;
+		*idx=i;
+		return;
+	}
+
 	if (unlikely(uch <= 0x0000001fU))
 		goto invalid;
 

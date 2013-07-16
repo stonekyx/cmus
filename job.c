@@ -481,6 +481,23 @@ static char **parse_lyrics_cmd(char *cmd, struct track_info *sel)
 	return av;
 }
 
+/*int str_replace(char * str, char * tbr, char * repl){
+	char * r;
+	if (strlen(repl) > strlen(tbr))
+		return -1;
+	r = str;
+	while (*r){
+		if (strcmp(str, tbr)){ r++; str++; }
+		else {
+			str = stpcpy(str, repl);
+			r += strlen(tbr);
+		}
+	}
+	if (*str) 
+		str[1] = '\0';
+	return 0;
+}*/
+
 void do_update_lyrics_job(void *data)
 {
 	char **av = NULL, *lyrics = NULL, *msg, *line;
@@ -488,6 +505,10 @@ void do_update_lyrics_job(void *data)
 	struct track_info * ti = con->ti;
 
 	if (ti->lyrics && strcmp(ti->lyrics, "")) {
+/*		lyrics = xstrdup(ti->lyrics);
+		str_replace(lyrics, "<0a>", "\n");
+		lyrics_show(lyrics);
+		free(lyrics);*/
 		lyrics_show(ti->lyrics);
 	} else {
 		line = xmalloc(25 + strlen(ti->filename));
@@ -520,6 +541,7 @@ void do_update_lyrics_job(void *data)
 	}
 	track_info_unref(ti);
 }
+
 void free_update_lyrics_job(void *data)
 {
 	free(data);

@@ -186,6 +186,7 @@ static const char *interesting[] = {
 	"musicbrainz_trackid",
 	"comment",
 	"bpm",
+	"lyrics",
 	"arranger", "composer", "conductor", "lyricist", "performer",
 	"remixer", "label", "publisher", "work", "opus", "partnumber", "part",
 	"subtitle", "media",

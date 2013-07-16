@@ -819,7 +819,6 @@ static void decode_freeformtext(struct id3tag *id3, const char *buf, int len, in
 {
 	int slen;
 	char *out;
-	int valid_description;
 
 	if (len <= 3)
 		return;
@@ -828,7 +827,7 @@ static void decode_freeformtext(struct id3tag *id3, const char *buf, int len, in
 	buf += 3;
 	len -= 3;
 
-	/* "Short content description" part of COMM/COM/USLT frame */
+	/* Skip "Short content description" part of COMM/COM/USLT frame */
 	out = decode_str(buf, len, encoding);
 	if (!out)
 		return;
@@ -845,7 +844,6 @@ static void decode_freeformtext(struct id3tag *id3, const char *buf, int len, in
 	out = decode_str(buf, len, encoding);
 	if (!out)
 		return;
-  d_print("found comment %s\n", out);
 	add_v2(id3, tagid, out);
 }
 
@@ -1008,7 +1006,6 @@ static void v2_add_frame(struct id3tag *id3, struct v2_frame_header *fh, const c
 		decode_freeformtext(id3, buf, len, encoding, ID3_COMMENT);
 	} else if (!strncmp(fh->id, "USLT", 4)) {
 		decode_freeformtext(id3, buf, len, encoding, ID3_LYRICS);
-		id3_debug("yeah I found lyrics!");
 	}
 }
 
