@@ -26,8 +26,11 @@
 #include "options.h"
 #include "cmdline.h"
 #include "debug.h"
+#include "worker.h"
+#include "cmus.h"
 
 #include <stdio.h>
+#include <signal.h>
 
 struct window *lyrics_win;
 struct searchable *lyrics_searchable;
@@ -41,7 +44,7 @@ static inline void lyrics_entry_to_iter(struct lyrics_entry *e, struct iter *ite
 	iter->data2 = NULL;
 }
 
-void lyrics_add_line(const char *line);
+void lyrics_add_line_(const char *line);
 
 static GENERIC_ITER_PREV(lyrics_get_prev, struct lyrics_entry, node)
 static GENERIC_ITER_NEXT(lyrics_get_next, struct lyrics_entry, node)
@@ -92,39 +95,39 @@ void lyrics_clear(void)
 		free((char *)ent->line);
 		free(ent);
 	}
+	window_set_empty(lyrics_win);
 }
 
-void lyrics_add_line(const char *line)
+void lyrics_add_line_(const char *line)
 {
 	struct lyrics_entry *ent;
 	ent = xnew(struct lyrics_entry, 1);
 	ent->line = xstrdup(line);
-	d_print("new: %p %d %p %p %s\n", ent, sizeof (struct lyrics_entry), &ent->line, ent->line, ent->line);
 	list_add_tail(&ent->node, &lyrics_head);
+}
+
+void lyrics_add_line(const char *line)
+{
+	lyrics_add_line_(line);
+	window_set_contents(lyrics_win, &lyrics_head);
+	window_changed(lyrics_win);
 }
 
 void lyrics_show(const char *lines)
 {
 	char *line, *save_ptr, *line_bak;
-	struct lyrics_entry *ent;
 
-	d_print("before clear:\n");
-	list_for_each_entry(ent, &lyrics_head, node)
-		d_print("lyrics entries: %s %p %d %p\n", ent->line, ent, sizeof (struct lyrics_entry), ent->line);
 	lyrics_clear();
-
-	d_print("after clear:\n");
-	list_for_each_entry(ent, &lyrics_head, node)
-		d_print("lyrics entries: %s\n", ent->line);
-	d_print("head->next %p, head->prev %p, head %p\n", &lyrics_head.next, &lyrics_head.prev, &lyrics_head);
 	line_bak = xstrdup(lines);
 	line = strtok_r(line_bak, "\n", &save_ptr);
 	/* we expect the lines to be newline separated */
 	while (line){
-		lyrics_add_line(line);
+		lyrics_add_line_(line);
 		line = strtok_r(NULL, "\n", &save_ptr);
 	}
 	free(line_bak);
+	window_set_contents(lyrics_win, &lyrics_head);
+	window_changed(lyrics_win);
 }
 
 void lyrics_init(void)
@@ -132,9 +135,7 @@ void lyrics_init(void)
 	struct iter iter;
 
 	lyrics_win = window_new(lyrics_get_prev, lyrics_get_next);
-	window_set_contents(lyrics_win, &lyrics_head);
-	window_changed(lyrics_win);
-	lyrics_add_line("No lyrics found yet. To search, select a track/file "\
+	lyrics_add_line("No lyrics searched yet. To search, select a track/file "\
 		"in view 1-4 and use fetch_lyrics");
 
 	iter.data0 = &lyrics_head;
@@ -145,6 +146,8 @@ void lyrics_init(void)
 
 void lyrics_exit(void)
 {
+	kill(0, SIGUSR1);
+	worker_remove_jobs(JOB_TYPE_LYRICS);
 	lyrics_clear();
 	searchable_free(lyrics_searchable);
 	window_free(lyrics_win);
