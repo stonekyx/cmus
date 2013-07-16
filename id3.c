@@ -257,6 +257,7 @@ const char * const id3_key_names[NUM_ID3_KEYS] = {
 	"composer",
 	"conductor",
 	"lyricist",
+	"lyrics",
 	"remixer",
 	"label",
 	"publisher",
@@ -539,7 +540,7 @@ static char *parse_genre(const char *str)
 	return xstrdup(str);
 }
 
-/* http://www.id3.org/id3v2.4.0-structure.txt */
+/* http://www.id3.org/id3v2.4.0-structure */
 static struct {
 	const char name[8];
 	enum id3_key key;
@@ -814,7 +815,7 @@ static void decode_txxx(struct id3tag *id3, const char *buf, int len, int encodi
 	add_v2(id3, key, out);
 }
 
-static void decode_comment(struct id3tag *id3, const char *buf, int len, int encoding)
+static void decode_freeformtext(struct id3tag *id3, const char *buf, int len, int encoding, int tagid)
 {
 	int slen;
 	char *out;
@@ -827,16 +828,12 @@ static void decode_comment(struct id3tag *id3, const char *buf, int len, int enc
 	buf += 3;
 	len -= 3;
 
-	/* "Short content description" part of COMM frame */
+	/* "Short content description" part of COMM/COM/USLT frame */
 	out = decode_str(buf, len, encoding);
 	if (!out)
 		return;
 
-	valid_description = strcmp(out, "") == 0 || strcmp(out, "description") == 0;
 	free(out);
-
-	if (!valid_description)
-		return;
 
 	slen = id3_skiplen(buf, len, encoding);
 	if (slen >= len)
@@ -848,8 +845,8 @@ static void decode_comment(struct id3tag *id3, const char *buf, int len, int enc
 	out = decode_str(buf, len, encoding);
 	if (!out)
 		return;
-
-	add_v2(id3, ID3_COMMENT, out);
+  d_print("found comment %s\n", out);
+	add_v2(id3, tagid, out);
 }
 
 /*
@@ -1006,9 +1003,12 @@ static void v2_add_frame(struct id3tag *id3, struct v2_frame_header *fh, const c
 	} else if (!strncmp(fh->id, "TXXX", 4)) {
 		decode_txxx(id3, buf, len, encoding);
 	} else if (!strncmp(fh->id, "COMM", 4)) {
-		decode_comment(id3, buf, len, encoding);
+		decode_freeformtext(id3, buf, len, encoding, ID3_COMMENT);
 	} else if (!strncmp(fh->id, "COM", 3)) {
-		decode_comment(id3, buf, len, encoding);
+		decode_freeformtext(id3, buf, len, encoding, ID3_COMMENT);
+	} else if (!strncmp(fh->id, "USLT", 4)) {
+		decode_freeformtext(id3, buf, len, encoding, ID3_LYRICS);
+		id3_debug("yeah I found lyrics!");
 	}
 }
 
