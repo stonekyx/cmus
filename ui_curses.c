@@ -878,7 +878,6 @@ static void print_lyrics(struct window *win, int row, struct iter *iter)
 	selected = iters_equal(iter, &sel);
 	bkgdset(pairs[(active << 2) | (selected << 1)]);
 
-  d_print ("e %p\n", e);
 	e_line = e->line;
 	if (!using_utf8) {
 		utf8_encode_to_buf(e_line);
@@ -2315,6 +2314,11 @@ static void init_curses(void)
 	act.sa_flags = 0;
 	act.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &act, NULL);
+
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+	act.sa_handler = SIG_IGN;
+	sigaction(SIGUSR1, &act, NULL);
 
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = 0;
