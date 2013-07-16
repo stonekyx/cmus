@@ -95,8 +95,9 @@ char * fetch(char *argv[])
 					}
 					if (fdsi.ssi_signo == SIGINT || fdsi.ssi_signo == SIGQUIT ||
 						fdsi.ssi_signo == SIGUSR1) {
+						d_print("we are asked to kill our poor child\n");
 						kill(pid, SIGTERM);
-						usleep(500000);
+						usleep(200000);
 						kill(pid, SIGKILL);
 						exit(EXIT_SUCCESS);
 					} else if (fdsi.ssi_signo == SIGCHLD) {
