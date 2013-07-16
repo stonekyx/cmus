@@ -96,6 +96,7 @@ void view_clear(int view)
 	case LYRICS_VIEW:
 		worker_remove_jobs(JOB_TYPE_LYRICS);
 		lyrics_clear();
+		break;
 	default:
 		info_msg(":clear only works in views 1-4 and 7");
 	}
