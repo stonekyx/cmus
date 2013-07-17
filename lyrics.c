@@ -113,11 +113,17 @@ void lyrics_add_line(const char *line)
 	window_changed(lyrics_win);
 }
 
-void lyrics_show(const char *lines)
+void lyrics_show(const char * artist, const char * title, const char *lines)
 {
 	char *line, *save_ptr, *line_bak;
 
 	lyrics_clear();
+	if (artist && title){
+		line = xmalloc(4 + strlen(artist) + strlen(title));
+		sprintf(line, "%s - %s", artist, title);
+		lyrics_add_line(line);
+		free(line);
+	}
 	line_bak = xstrdup(lines);
 	line = strtok_r(line_bak, "\n", &save_ptr);
 	/* we expect the lines to be newline separated */

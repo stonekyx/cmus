@@ -509,7 +509,7 @@ void do_update_lyrics_job(void *data)
 		str_replace(lyrics, "<0a>", "\n");
 		lyrics_show(lyrics);
 		free(lyrics);*/
-		lyrics_show(ti->lyrics);
+		lyrics_show(ti->artist, ti->title, ti->lyrics);
 	} else {
 		line = xmalloc(25 + strlen(ti->filename));
 		/* no new lines here, they would be escaped and displayed */
@@ -528,9 +528,9 @@ void do_update_lyrics_job(void *data)
 			error_msg("executing %s failed", av[0]);
 		} else {
 			if (strcmp(lyrics, ""))
-				lyrics_show(lyrics);
+				lyrics_show(ti->artist, ti->title, lyrics);
 			else{
-				lyrics_show((msg=xstrdup("Sorry, no lyrics found")));
+				lyrics_show(NULL, NULL, (msg=xstrdup("Sorry, no lyrics found")));
 				free(msg);
 			}
 		}

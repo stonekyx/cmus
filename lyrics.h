@@ -40,7 +40,7 @@ extern struct window *lyrics_win;
 extern struct searchable *lyrics_searchable;
 
 void lyrics_init(void);
-void lyrics_show(const char * lyrics);
+void lyrics_show(const char *artist, const char *title, const char *lyrics);
 void lyrics_add_line(const char *line);
 void lyrics_clear(void);
 void lyrics_exit(void);
