@@ -247,7 +247,7 @@ static const char *usage =
 "  -s, --stop           player-stop\n"
 "  -n, --next           player-next\n"
 "  -r, --prev           player-prev\n"
-"  -f, --file           player-play FILE\n"
+"  -f, --file FILE      player-play FILE\n"
 "  -R, --repeat         toggle repeat\n"
 "  -S, --shuffle        toggle shuffle\n"
 "  -v, --volume VOL     vol VOL\n"
