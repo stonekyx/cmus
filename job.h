@@ -41,6 +41,7 @@ struct update_cache_data {
 
 struct update_lyrics_data {
 	struct track_info *ti;
+	int force;
 };
 
 void do_add_job(void *data);

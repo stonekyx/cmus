@@ -48,4 +48,6 @@ int replaygain_decode(unsigned int field, int *gain);
 char *expand_filename(const char *name);
 void shuffle_array(void *array, size_t n, size_t size);
 
+void make_dir(const char *dirname);
+
 #endif

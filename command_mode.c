@@ -1224,6 +1224,11 @@ static void cmd_lyrics_fetch(char *arg)
 
 	job = xnew(struct update_lyrics_data, 1);
 	job->ti=sel;
+	if(arg && !strncmp(arg, "-f", 2)) {
+		job->force = 1;
+	} else {
+		job->force = 0;
+	}
 
 	/* If we don't do this, more than one process will write to the window*/
 	worker_remove_jobs(JOB_TYPE_LYRICS);
@@ -2681,7 +2686,7 @@ struct command commands[] = {
 	{ "colorscheme",	cmd_colorscheme,1, 1, expand_colorscheme, 0, 0 },
 	{ "echo",		cmd_echo,	1,-1, NULL,		  0, 0 },
 	{ "factivate",		cmd_factivate,	0, 1, expand_factivate,	  0, 0 },
-	{ "lyrics-fetch",		cmd_lyrics_fetch,	0, 0, NULL, 0, CMD_UNSAFE },
+	{ "lyrics-fetch",		cmd_lyrics_fetch,	0, 1, NULL, 0, CMD_UNSAFE },
 	{ "filter",		cmd_filter,	0, 1, NULL,		  0, 0 },
 	{ "fset",		cmd_fset,	1, 1, expand_fset,	  0, 0 },
 	{ "help",		cmd_help,	0, 0, NULL,		  0, 0 },

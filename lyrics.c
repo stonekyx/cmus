@@ -20,6 +20,7 @@
 #include "search.h"
 #include "misc.h"
 #include "xmalloc.h"
+#include "xstrjoin.h"
 #include "keys.h"
 #include "command_mode.h"
 #include "ui_curses.h"
@@ -31,6 +32,7 @@
 
 #include <stdio.h>
 #include <signal.h>
+#include <limits.h>
 
 struct window *lyrics_win;
 struct searchable *lyrics_searchable;
@@ -115,21 +117,26 @@ void lyrics_add_line(const char *line)
 
 void lyrics_show(const char * artist, const char * title, const char *lines)
 {
-	char *line, *save_ptr, *line_bak;
+	char *line_bak;
 
 	lyrics_clear();
 	if (artist && title){
-		line = xmalloc(4 + strlen(artist) + strlen(title));
-		sprintf(line, "%s - %s", artist, title);
-		lyrics_add_line(line);
-		free(line);
+		line_bak = xmalloc(4 + strlen(artist) + strlen(title));
+		sprintf(line_bak, "%s - %s", artist, title);
+		lyrics_add_line(line_bak);
+		free(line_bak);
 	}
 	line_bak = xstrdup(lines);
-	line = strtok_r(line_bak, "\n", &save_ptr);
 	/* we expect the lines to be newline separated */
-	while (line){
-		lyrics_add_line_(line);
-		line = strtok_r(NULL, "\n", &save_ptr);
+	while (line_bak){
+		char *next = strchr(line_bak, '\n');
+		if(next)
+			*next = 0;
+		lyrics_add_line_(line_bak);
+		if(next)
+			line_bak = next+1;
+		else
+			line_bak = NULL;
 	}
 	free(line_bak);
 	window_set_contents(lyrics_win, &lyrics_head);
@@ -157,4 +164,65 @@ void lyrics_exit(void)
 	lyrics_clear();
 	searchable_free(lyrics_searchable);
 	window_free(lyrics_win);
+}
+
+static void lyrics_canonify(char *filename)
+{
+	char *p;
+	for(p=filename; *p; p++) {
+		if('/' == *p) {
+			*p = '_';
+		}
+	}
+}
+
+static char *lyrics_get_filepath(const char *filename)
+{
+	char *canon_fn = xstrdup(filename);
+	char *dir = xstrjoin(cmus_config_dir, "/lyrics/");
+	char *path;
+	make_dir(dir);
+	if(strlen(canon_fn)>NAME_MAX) {
+		canon_fn = canon_fn+strlen(canon_fn)-NAME_MAX;
+	}
+	if(strlen(canon_fn)+strlen(dir)>PATH_MAX) {
+		canon_fn = canon_fn+(strlen(canon_fn)+strlen(dir)-PATH_MAX);
+	}
+	lyrics_canonify(canon_fn);
+	path = xstrjoin(dir, canon_fn);
+	free(dir);
+	free(canon_fn);
+	return path;
+}
+
+void lyrics_save(const char *filename, const char *lyrics)
+{
+	FILE *fout;
+	char *path = lyrics_get_filepath(filename);
+	fout = fopen(path, "w");
+	fwrite(lyrics, sizeof(char), strlen(lyrics), fout);
+	fclose(fout);
+	free(path);
+}
+
+char *lyrics_load(const char *filename)
+{
+	FILE *fin;
+	char *path = lyrics_get_filepath(filename);
+	long filesize;
+	char *res;
+	fin = fopen(path, "r");
+	if(!fin) {
+		return NULL;
+	}
+
+	fseek(fin, 0, SEEK_END);
+	filesize = ftell(fin);
+	rewind(fin);
+
+	res = xmalloc(filesize+1);
+	fread(res, sizeof(char), filesize, fin);
+	fclose(fin);
+	free(path);
+	return res;
 }

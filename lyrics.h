@@ -45,4 +45,7 @@ void lyrics_add_line(const char *line);
 void lyrics_clear(void);
 void lyrics_exit(void);
 
+void lyrics_save(const char *filename, const char *lyrics);
+char *lyrics_load(const char *filename);
+
 #endif /* LYRICS_H */

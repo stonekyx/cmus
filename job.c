@@ -524,11 +524,13 @@ void do_update_lyrics_job(void *data)
 			return;
 		}
 
-		if (!(lyrics=fetch(av))) {
+		if (!(!con->force && (lyrics=lyrics_load(ti->filename))) && !(lyrics=fetch(av))) {
 			error_msg("executing %s failed", av[0]);
 		} else {
-			if (strcmp(lyrics, ""))
+			if (strcmp(lyrics, "")) {
 				lyrics_show(ti->artist, ti->title, lyrics);
+				lyrics_save(ti->filename, lyrics);
+			}
 			else{
 				lyrics_show(NULL, NULL, (msg=xstrdup("Sorry, no lyrics found")));
 				free(msg);

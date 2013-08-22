@@ -158,7 +158,7 @@ static int dir_exists(const char *dirname)
 	return 1;
 }
 
-static void make_dir(const char *dirname)
+void make_dir(const char *dirname)
 {
 	int rc;
 
