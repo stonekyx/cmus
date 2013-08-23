@@ -1196,6 +1196,7 @@ static void cmd_lyrics_fetch(char *arg)
 {
 	struct track_info *sel;
 	struct update_lyrics_data *job;
+	char **argv=NULL;
 
 	if (cur_view > QUEUE_VIEW) {
 		info_msg("Fetching lyrics is supported only in views 1-4");
@@ -1223,11 +1224,23 @@ static void cmd_lyrics_fetch(char *arg)
 		return;
 
 	job = xnew(struct update_lyrics_data, 1);
-	job->ti=sel;
-	if(arg && !strncmp(arg, "-f", 2)) {
-		job->force = 1;
-	} else {
-		job->force = 0;
+	job->ti = xnew(struct track_info, 1);
+	*job->ti = *sel;
+	job->force = 0;
+	if(arg) {
+		int i;
+		argv = get_words(arg);
+		for(i=0; argv[i]; i++) {
+			if(!strcmp(argv[i], "-f")) {
+				job->force = 1;
+			}
+			if(!strncmp(argv[i], "-a", 2)) {
+				job->ti->artist = argv[i]+2;
+			}
+			if(!strncmp(argv[i], "-t", 2)) {
+				job->ti->title = argv[i]+2;
+			}
+		}
 	}
 
 	/* If we don't do this, more than one process will write to the window*/
@@ -1238,6 +1251,9 @@ static void cmd_lyrics_fetch(char *arg)
 
 	prev_view = cur_view;
 	set_view(LYRICS_VIEW);
+
+	if(argv)
+		free_str_array(argv);
 }
 
 #define VF_RELATIVE	0x01
@@ -2686,7 +2702,7 @@ struct command commands[] = {
 	{ "colorscheme",	cmd_colorscheme,1, 1, expand_colorscheme, 0, 0 },
 	{ "echo",		cmd_echo,	1,-1, NULL,		  0, 0 },
 	{ "factivate",		cmd_factivate,	0, 1, expand_factivate,	  0, 0 },
-	{ "lyrics-fetch",		cmd_lyrics_fetch,	0, 1, NULL, 0, CMD_UNSAFE },
+	{ "lyrics-fetch",		cmd_lyrics_fetch,	0, 3, NULL, 0, CMD_UNSAFE },
 	{ "filter",		cmd_filter,	0, 1, NULL,		  0, 0 },
 	{ "fset",		cmd_fset,	1, 1, expand_fset,	  0, 0 },
 	{ "help",		cmd_help,	0, 0, NULL,		  0, 0 },

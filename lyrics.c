@@ -181,6 +181,7 @@ static char *lyrics_get_filepath(const char *filename)
 	char *canon_fn = xstrdup(filename);
 	char *dir = xstrjoin(cmus_config_dir, "/lyrics/");
 	char *path;
+	char *canon_fn_bak = canon_fn;
 	make_dir(dir);
 	if(strlen(canon_fn)>NAME_MAX) {
 		canon_fn = canon_fn+strlen(canon_fn)-NAME_MAX;
@@ -191,7 +192,7 @@ static char *lyrics_get_filepath(const char *filename)
 	lyrics_canonify(canon_fn);
 	path = xstrjoin(dir, canon_fn);
 	free(dir);
-	free(canon_fn);
+	free(canon_fn_bak);
 	return path;
 }
 

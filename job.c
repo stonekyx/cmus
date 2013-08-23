@@ -546,5 +546,6 @@ void do_update_lyrics_job(void *data)
 
 void free_update_lyrics_job(void *data)
 {
+	free(((struct update_lyrics_data *)data)->ti);
 	free(data);
 }
